@@ -17,7 +17,7 @@ SOFTWARE.
 
 import requests
 
-fabricExtractorUrl = "https://raw.githubusercontent.com/thefirethirteen/fabric.mod.json-extractor/main/main.py"
+fabricExtractorUrl = "https://raw.githubusercontent.com/thefirethirteen/modinfo-file-extractor/main/fabric_extractor.py"
 
 fabricExtractorWeb = requests.get(fabricExtractorUrl)
 
