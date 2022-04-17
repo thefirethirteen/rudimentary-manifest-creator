@@ -21,5 +21,5 @@ fabricExtractorUrl = "https://raw.githubusercontent.com/thefirethirteen/modinfo-
 
 fabricExtractorWeb = requests.get(fabricExtractorUrl)
 
-with open("fabricExtractor.py", 'wb') as fe:
+with open("fabric_extractor.py", 'wb') as fe:
     fe.write(fabricExtractorWeb.content)
