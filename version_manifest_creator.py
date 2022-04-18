@@ -36,13 +36,18 @@ path_prefix = "./extracted/"
 with open(path_prefix + json_filename, 'r') as json_file:
     json_data = json.load(json_file)
 
-loader_data = {'loaders': ["fabric"]}
-minecraft_version_data = {'minecraftVersions': json_data["depends"]["minecraft"]}
+manifest_data = {'loaders': ["fabric"]}
+manifest_data.update({'minecraftVersions': json_data["depends"]["minecraft"]})
 
-manifest_data = [loader_data, minecraft_version_data]
+client_environment = input("Clientside [unsupported / optional / required]: ")
+server_environment = input("Serverside [unsupported / optional / required]: ")
+
+manifest_data.update({'environment': {'server': server_environment, 'client': client_environment}})
+
+print([manifest_data])
 
 with open(json_data["version"] + ".yaml", 'w') as version_manifest:
-    yaml.dump(manifest_data, version_manifest)
+    yaml.dump([manifest_data], version_manifest)
 
 # Cleanup
 shutil.rmtree("./extracted")
