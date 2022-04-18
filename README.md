@@ -1,6 +1,6 @@
 # rudimentary-manifest-creator
-Rudimentary manifest creator for modget-manifests
+Rudimentary manifest creator for the-mod-index
 
 ## Required packages
 - `requests`
-- `pyyaml`
+- `pyyaml` (going away)
