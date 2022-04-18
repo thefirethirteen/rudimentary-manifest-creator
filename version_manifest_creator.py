@@ -17,9 +17,32 @@ SOFTWARE.
 
 import sys
 import subprocess
+import json
+import time
+import yaml
+import shutil
 
+# Get file to process
 file = sys.argv[1]
 
+# Process file using the fabric extractor
 subprocess.Popen([sys.executable, "fabric_extractor.py", file])
+time.sleep(1)
 
-print("Processed " + file)
+# Make the manifest
+json_filename = file + ".json"
+path_prefix = "./extracted/"
+
+with open(path_prefix + json_filename, 'r') as json_file:
+    json_data = json.load(json_file)
+
+loader_data = {'loaders': ["fabric"]}
+minecraft_version_data = {'minecraftVersions': json_data["depends"]["minecraft"]}
+
+manifest_data = [loader_data, minecraft_version_data]
+
+with open(json_data["version"] + ".yaml", 'w') as version_manifest:
+    yaml.dump(manifest_data, version_manifest)
+
+# Cleanup
+shutil.rmtree("./extracted")
