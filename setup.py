@@ -17,9 +17,9 @@ SOFTWARE.
 
 import requests
 
-fabricExtractorUrl = "https://raw.githubusercontent.com/thefirethirteen/modinfo-file-extractor/main/fabric_extractor.py"
+fabricExtractorUrl = 'https://raw.githubusercontent.com/thefirethirteen/modinfo-file-extractor/main/fabric_extractor.py'
 
-fabricExtractorWeb = requests.get(fabricExtractorUrl)
+fabricExtractorResponse = requests.get(fabricExtractorUrl)
 
-with open("fabric_extractor.py", 'wb') as fe:
-    fe.write(fabricExtractorWeb.content)
+with open("fabric_extractor.py", 'wb') as fabricExtractorFile:
+    fabricExtractorFile.write(fabricExtractorResponse.content)
