@@ -13,13 +13,14 @@ SOFTWARE.
 """
 
 # modrinth_manifest_creator.py
-# Creates a manifest
+# Creates a manifest using modrinth
 
 import argparse
 import subprocess
 import sys
 import time
 import json
+import urllib.parse
 import requests
 # import hashlib
 import os
@@ -28,8 +29,10 @@ import os
 parser = argparse.ArgumentParser()
 
 parser.add_argument("modrinth_id")
-parser.add_argument("curseforge_id")
 parser.add_argument("modrinth_version_id")
+parser.add_argument("curseforge_id")
+parser.add_argument("curseforge_version_page_link")
+parser.add_argument("source_control_version_link")
 
 args = parser.parse_args()
 
@@ -49,18 +52,17 @@ with open("fabric_extractor.py", 'wb') as fabric_extractor_file:
 
 fabric_extractor_response.close()
 
-# Get modrinth version info, if it exists
-if args.modrinth_version_id != "null":
-    modrinth_link = MODRINTH_API_VERSION_PREFIX + args.modrinth_version_id
-    modrinth_api_response = requests.get(modrinth_link)
-    with open("./modrinth_version_json.json", 'wb') as modrinth_json:
-        modrinth_json.write(modrinth_api_response.content)
-    with open("./modrinth_version_json.json", 'r') as modrinth_json:
-        modrinth_version_data = json.load(modrinth_json)
+# Get modrinth version info
+modrinth_link = MODRINTH_API_VERSION_PREFIX + args.modrinth_version_id
+modrinth_api_response = requests.get(modrinth_link)
+with open("./modrinth_version_json.json", 'wb') as modrinth_json:
+    modrinth_json.write(modrinth_api_response.content)
+with open("./modrinth_version_json.json", 'r') as modrinth_json:
+    modrinth_version_data = json.load(modrinth_json)
 
-    # Cleanup
-    modrinth_api_response.close()
-    os.remove("./modrinth_version_json.json")
+# Cleanup
+modrinth_api_response.close()
+os.remove("./modrinth_version_json.json")
 
 # Get the modfile
 modfile_url = modrinth_version_data["files"][0]["url"]
@@ -109,52 +111,76 @@ os.remove(fabric_json_filename)
 # Make the manifest
 python_manifest_data = {"schemaVersion": "1.0.0"}
 
-# Get modrinth project info, if it exists
-if args.modrinth_id != "null":
-    modrinth_link = MODRINTH_API_PROJECT_PREFIX + args.modrinth_id
-    modrinth_api_response = requests.get(modrinth_link)
-    with open("./modrinth_project_json.json", 'wb') as modrinth_json:
-        modrinth_json.write(modrinth_api_response.content)
-    with open("./modrinth_project_json.json", 'r') as modrinth_json:
-        modrinth_project_data = json.load(modrinth_json)
+# Get modrinth project info
+modrinth_link = MODRINTH_API_PROJECT_PREFIX + args.modrinth_id
+modrinth_api_response = requests.get(modrinth_link)
+with open("./modrinth_project_json.json", 'wb') as modrinth_json:
+    modrinth_json.write(modrinth_api_response.content)
+with open("./modrinth_project_json.json", 'r') as modrinth_json:
+    modrinth_project_data = json.load(modrinth_json)
 
-    # Cleanup
-    modrinth_api_response.close()
-    os.remove("./modrinth_project_json.json")
+# Cleanup
+modrinth_api_response.close()
+os.remove("./modrinth_project_json.json")
 
-if args.modrinth_id != "null":
-    python_manifest_data.update({"fancyName": modrinth_project_data["title"]})
-    python_manifest_data.update({"author": "TODO"})  # TODO
+python_manifest_data.update({"fancyName": modrinth_project_data["title"]})
 
-    if modrinth_project_data["license"]["id"] != "custom":
-        python_manifest_data.update({"license": modrinth_project_data["license"]["id"]})
+if modrinth_project_data["source_url"] is not None:
+    source_control_url = modrinth_project_data["source_url"]
+    if "github.com" in source_control_url:
+        github_api_base_url = "https://api.github.com/repos"
+        github_path = urllib.parse.urlparse(source_control_url).path
+        github_link = github_api_base_url + github_path
+
+        github_api_response = requests.get(github_link)
+        with open("./github_repo_json.json", 'wb') as github_json:
+            github_json.write(github_api_response.content)
+        with open("./github_repo_json.json", 'r') as github_json:
+            github_repo_data = json.load(github_json)
+
+        github_api_response.close()
+        os.remove("./github_repo_json.json")
+
+        python_manifest_data.update({"author": github_repo_data["owner"]["login"]})
     else:
-        python_manifest_data.update({"license": modrinth_project_data["license"]["url"]})
+        modrinth_api_response = requests.get(modrinth_link + "/members")
+        with open("./modrinth_team_json.json", 'wb') as modrinth_json:
+            modrinth_json.write(modrinth_api_response.content)
+        with open("./modrinth_team_json.json", 'r') as modrinth_json:
+            modrinth_team_data = json.load(modrinth_json)
 
-if args.curseforge_id != "null":
+        modrinth_api_response.close()
+        os.remove("./modrinth_team_json.json")
+
+        for i in range(len(modrinth_team_data)):
+            if modrinth_team_data[i]["role"] == "Owner":
+                python_manifest_data.update({"author": modrinth_team_data[i]["username"]})
+
+if modrinth_project_data["license"]["id"] != "custom":
+    python_manifest_data.update({"license": modrinth_project_data["license"]["id"]})
+else:
+    python_manifest_data.update({"license": modrinth_project_data["license"]["url"]})
+
+if args.curseforge_id != "none":
     python_manifest_data.update({"curseForgeId": args.curseforge_id})
 else:
     python_manifest_data.update({"curseForgeId": None})
 
-if args.modrinth_id != "null":
-    python_manifest_data.update({"modrinthId": args.modrinth_id})
-else:
-    python_manifest_data.update({"modrinthId": None})
+python_manifest_data.update({"modrinthId": args.modrinth_id})
 
-if args.modrinth_id != "null":
-    python_manifest_data.update({"links": {"issue": modrinth_project_data["issues_url"]}})
-    python_manifest_data["links"].update({"sourceControl": modrinth_project_data["source_url"]})
+python_manifest_data.update({"links": {"issue": modrinth_project_data["issues_url"]}})
+python_manifest_data["links"].update({"sourceControl": modrinth_project_data["source_url"]})
 
-    python_manifest_data["links"].update({"others": []})
-    if modrinth_project_data["wiki_url"] is not None:
-        python_manifest_data["links"]["others"].append({"linkName": "Discord",
-                                                        "url": modrinth_project_data["wiki_url"]})
-    if modrinth_project_data["discord_url"] is not None:
-        python_manifest_data["links"]["others"].append({"linkName": "Discord",
-                                                        "url": modrinth_project_data["discord_url"]})
-
-    if len(python_manifest_data["links"]["others"]) == 0:
-        python_manifest_data["links"].update({"others": None})
+python_manifest_data["links"].update({"others": []})
+if modrinth_project_data["wiki_url"] is not None:
+    python_manifest_data["links"]["others"].append({"linkName": "Wiki",
+                                                    "url": modrinth_project_data["wiki_url"]})
+if modrinth_project_data["discord_url"] is not None:
+    python_manifest_data["links"]["others"].append({"linkName": "Discord",
+                                                    "url": modrinth_project_data["discord_url"]})
+for i in range(len(modrinth_project_data["donation_urls"])):
+    python_manifest_data["links"]["others"].append({"linkName": modrinth_project_data["donation_urls"][i]["platform"],
+                                                    "url": modrinth_project_data["donation_urls"][i]["url"]})
 
 python_manifest_data.update({"files": []})
 
@@ -167,9 +193,17 @@ with open(args.mod_file, 'rb') as hfile:
         buffer = hfile.read(BLOCKSIZE)
 """
 
+mod_download_links = [modrinth_version_data["files"][0]["url"]]
+if args.source_control_version_link != "none":
+    mod_download_links.append(args.source_control_version_link)
+if args.curseforge_version_page_link != "none":
+    curseforge_download_link = args.curseforge_version_page_link.replace("files", "download") + "/file"
+    mod_download_links.append(curseforge_download_link)
+
+
 python_manifest_data["files"].append({"fileName": modfile_name, "mcVersions": modrinth_version_data["game_versions"],
                                       "sha1Hash": modrinth_version_data["files"][0]["hashes"]["sha1"],
-                                      "downloadUrls": ["TODO"]}) # TODO
+                                      "downloadUrls": mod_download_links})
 
 manifest_json_file_name = fabric_json_data["id"] + ".json"
 
