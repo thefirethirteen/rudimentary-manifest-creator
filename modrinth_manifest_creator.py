@@ -25,16 +25,13 @@ import requests
 # import hashlib
 import os
 
-# Parse arguments
+# Get options
 parser = argparse.ArgumentParser()
-
-parser.add_argument("modrinth_id")
-parser.add_argument("modrinth_version_id")
-parser.add_argument("curseforge_id")
-parser.add_argument("curseforge_version_page_link")
-parser.add_argument("source_control_version_link")
-
+parser.add_argument("options_file_name")
 args = parser.parse_args()
+
+with open(args.options_file_name, 'rt') as options_file:
+    options = json.loads(options_file.read())
 
 # "Constants"
 BLOCKSIZE = 65536
@@ -53,7 +50,7 @@ with open("fabric_extractor.py", 'wb') as fabric_extractor_file:
 fabric_extractor_response.close()
 
 # Get modrinth version info
-modrinth_link = MODRINTH_API_VERSION_PREFIX + args.modrinth_version_id
+modrinth_link = MODRINTH_API_VERSION_PREFIX + options["modrinth_version_id"]
 modrinth_api_response = requests.get(modrinth_link)
 with open("./modrinth_version_json.json", 'wb') as modrinth_json:
     modrinth_json.write(modrinth_api_response.content)
@@ -112,7 +109,7 @@ os.remove(fabric_json_filename)
 python_manifest_data = {"schemaVersion": "1.0.0"}
 
 # Get modrinth project info
-modrinth_link = MODRINTH_API_PROJECT_PREFIX + args.modrinth_id
+modrinth_link = MODRINTH_API_PROJECT_PREFIX + options["modrinth_id"]
 modrinth_api_response = requests.get(modrinth_link)
 with open("./modrinth_project_json.json", 'wb') as modrinth_json:
     modrinth_json.write(modrinth_api_response.content)
@@ -161,8 +158,8 @@ if modrinth_project_data["license"]["id"] != "custom":
 else:
     python_manifest_data.update({"license": modrinth_project_data["license"]["url"]})
 
-if args.curseforge_id != "none":
-    python_manifest_data.update({"curseForgeId": args.curseforge_id})
+if options["curseforge_project_id"] is not None:
+    python_manifest_data.update({"curseForgeId": options["curseforge_project_id"]})
 else:
     python_manifest_data.update({"curseForgeId": None})
 
@@ -194,19 +191,19 @@ with open(args.mod_file, 'rb') as hfile:
 """
 
 mod_download_links = [modrinth_version_data["files"][0]["url"]]
-if args.source_control_version_link != "none":
-    mod_download_links.append(args.source_control_version_link)
-if args.curseforge_version_page_link != "none":
-    curseforge_download_link = args.curseforge_version_page_link.replace("files", "download") + "/file"
+if options["source_control_version_link"] is not None:
+    mod_download_links.append(options["source_control_version_link"])
+if options["curseforge_version_page_link"] is not None:
+    curseforge_download_link = options["curseforge_version_page_link"].replace("files", "download") + "/file"
     mod_download_links.append(curseforge_download_link)
 
 
-python_manifest_data["files"].append({"fileName": modfile_name, "mcVersions": modrinth_version_data["game_versions"],
+python_manifest_data["files"].append({"fileName": modfile_name,
+                                      "mcVersions": modrinth_version_data["game_versions"],
                                       "sha1Hash": modrinth_version_data["files"][0]["hashes"]["sha1"],
                                       "downloadUrls": mod_download_links})
 
-manifest_json_file_name = fabric_json_data["id"] + ".json"
-
 # Write the manifest
-with open(manifest_json_file_name, 'w') as manifest_json_file:
-    manifest_json_file.write(json.dumps(python_manifest_data, indent=4))
+manifest_file_name = fabric_json_data["id"] + ".json"
+with open(manifest_file_name, 'w') as manifest_file:
+    manifest_file.write(json.dumps(python_manifest_data, indent=4))
