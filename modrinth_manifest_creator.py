@@ -166,7 +166,7 @@ if args.curseforge_id != "none":
 else:
     python_manifest_data.update({"curseForgeId": None})
 
-python_manifest_data.update({"modrinthId": args.modrinth_id})
+python_manifest_data.update({"modrinthId": modrinth_project_data["id"]})
 
 python_manifest_data.update({"links": {"issue": modrinth_project_data["issues_url"]}})
 python_manifest_data["links"].update({"sourceControl": modrinth_project_data["source_url"]})
