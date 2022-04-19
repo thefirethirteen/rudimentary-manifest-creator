@@ -16,29 +16,24 @@ SOFTWARE.
 # TODO
 
 import argparse
+import json
 import subprocess
 import sys
 
-# Parse arguments
+# Get options
 parser = argparse.ArgumentParser()
-
-parser.add_argument("modrinth_id")
-parser.add_argument("modrinth_version_id")
-parser.add_argument("curseforge_project_id")
-parser.add_argument("curseforge_version_page_link")
-parser.add_argument("source_control_version_link")
-parser.add_argument("manual_manifest_creation")
-
+parser.add_argument("options_file_name")
 args = parser.parse_args()
 
-# Choose the appropriate manifest creator based on what data was given
-# subprocess.Popen([sys.executable])
+with open(args.options_file_name, 'rt') as options_file:
+    options = json.loads(options_file.read())
 
-if args.manual_manifest_creation == "yes":
+# Choose the appropriate manifest creator based on what data was given
+
+if options["manual_manifest_creation"] is True:
     print("Manual manifest creation not available. Exiting") # TODO
-elif args.modrinth_id != "none" and args.modrinth_version_id != "none":
-    subprocess.Popen([sys.executable, "modrinth_manifest_creator.py", args.modrinth_id, args.modrinth_version_id,
-                      args.curseforge_project_id,args.curseforge_version_page_link , args.source_control_version_link])
+elif options["modrinth_id"] is not None and options["modrinth_version_id"] is not None:
+    subprocess.Popen([sys.executable, "modrinth_manifest_creator.py", args.options_file_name])
 
 else:
-    print("Bad argument combo. Exiting.")
+    print("Bad option combo. Exiting.")
