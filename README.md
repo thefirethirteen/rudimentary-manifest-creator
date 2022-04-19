@@ -6,4 +6,4 @@ Rudimentary manifest creator for the-mod-index
 
 ## Usage
 
-`python3 modrinth_manifest_creator.py modrinth_id curseforge_id modrinth_version_id`
+TODO
